@@ -32,6 +32,7 @@ export default function GameScreen() {
   const [scoreModalVisible, setScoreModalVisible] = useState(false);
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [scoreInput, setScoreInput] = useState('');
+  const [isNegative, setIsNegative] = useState(false);
 
   useEffect(() => {
     loadGameData();
@@ -52,26 +53,24 @@ export default function GameScreen() {
       };
       setGame(gameWithDefaults);
       setCurrentRound(gameWithDefaults.scores.length);
-      if (gameWithDefaults.scores.length > 0) {
-        const lastRound = gameWithDefaults.scores[gameWithDefaults.scores.length - 1];
-        const scores: { [playerId: string]: string } = {};
-        lastRound.forEach((entry) => {
-          scores[entry.playerId] = entry.score.toString();
-        });
-        setRoundScores(scores);
-      } else {
-        const initialScores: { [playerId: string]: string } = {};
-        gameWithDefaults.playerIds.forEach((id) => {
-          initialScores[id] = '0';
-        });
-        setRoundScores(initialScores);
-      }
+      // Always initialize round scores to 0 when loading/resuming a game
+      // The game's historical scores are already saved in game.scores
+      const initialScores: { [playerId: string]: string } = {};
+      gameWithDefaults.playerIds.forEach((id) => {
+        initialScores[id] = '0';
+      });
+      setRoundScores(initialScores);
     }
   };
 
   const handleScoreInput = (playerId: string) => {
     setEditingPlayerId(playerId);
-    setScoreInput(roundScores[playerId] || '0');
+    const currentScore = roundScores[playerId] || '';
+    // Check if current score is negative
+    const scoreValue = parseFloat(currentScore) || 0;
+    setIsNegative(scoreValue < 0);
+    // Clear '0' if it's the default, otherwise keep current score (absolute value)
+    setScoreInput(currentScore === '0' ? '' : Math.abs(scoreValue).toString());
     setScoreModalVisible(true);
   };
 
@@ -79,15 +78,20 @@ export default function GameScreen() {
     if (editingPlayerId === null) return;
 
     const score = parseFloat(scoreInput);
-    if (isNaN(score)) {
+    if (isNaN(score) && scoreInput !== '') {
       Alert.alert('Error', 'Please enter a valid number');
       return;
     }
 
-    setRoundScores({ ...roundScores, [editingPlayerId]: scoreInput });
+    // Apply negative sign if toggle is on
+    const finalScore = isNegative && score !== 0 ? -Math.abs(score) : Math.abs(score);
+    const scoreString = finalScore.toString();
+
+    setRoundScores({ ...roundScores, [editingPlayerId]: scoreString });
     setScoreModalVisible(false);
     setEditingPlayerId(null);
     setScoreInput('');
+    setIsNegative(false);
   };
 
   const handleAddRound = async () => {
@@ -243,10 +247,14 @@ export default function GameScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.gameTitle}>{game.templateName}</Text>
-        <Text style={styles.roundText}>Round {currentRound + 1}</Text>
-        <TouchableOpacity style={styles.finishButton} onPress={handleFinishGame}>
-          <Text style={styles.finishButtonText}>Finish Game</Text>
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity style={styles.nextRoundButton} onPress={handleAddRound}>
+            <Text style={styles.nextRoundButtonText}>Next Round</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.finishButton} onPress={handleFinishGame}>
+            <Text style={styles.finishButtonText}>Finish Game</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -258,40 +266,29 @@ export default function GameScreen() {
         bounces={true}
       >
         <View style={styles.leaderboard}>
-          <Text style={styles.leaderboardTitle}>Current Standings</Text>
-          {sortedPlayers.map((player, index) => (
-            <View key={player.id} style={styles.leaderboardItem}>
-              <View style={styles.rankContainer}>
-                <Text style={styles.rank}>#{index + 1}</Text>
-              </View>
-              <Text style={styles.leaderboardName}>{player.name}</Text>
-              <Text style={styles.leaderboardScore}>{player.total}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.scoresSection}>
-          <Text style={styles.scoresSectionTitle}>Round {currentRound + 1} Scores</Text>
-          {game.playerIds.map((playerId) => {
-            const playerName = game.playerNames[game.playerIds.indexOf(playerId)];
-            const currentScore = getCurrentRoundScore(playerId);
+          <Text style={styles.leaderboardTitle}>Round {currentRound + 1}</Text>
+          {sortedPlayers.map((player, index) => {
+            const roundScore = getCurrentRoundScore(player.id);
             return (
-              <TouchableOpacity
-                key={playerId}
-                style={styles.scoreCard}
-                onPress={() => handleScoreInput(playerId)}
-              >
-                <Text style={styles.scoreCardName}>{playerName}</Text>
-                <Text style={styles.scoreCardValue}>{currentScore}</Text>
-                <Text style={styles.tapToEdit}>Tap to edit</Text>
-              </TouchableOpacity>
+              <View key={player.id} style={styles.leaderboardItem}>
+                <View style={styles.rankContainer}>
+                  <Text style={styles.rank}>#{index + 1}</Text>
+                </View>
+                <Text style={styles.leaderboardName}>{player.name}</Text>
+                <Text style={styles.leaderboardScore}>{player.total}</Text>
+                <TouchableOpacity
+                  style={styles.roundScoreButton}
+                  onPress={() => handleScoreInput(player.id)}
+                >
+                  <Text style={styles.roundScoreButtonText}>
+                    {roundScore === 0 && !roundScores[player.id] ? 'Enter' : roundScore}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             );
           })}
         </View>
 
-        <TouchableOpacity style={styles.addRoundButton} onPress={handleAddRound}>
-          <Text style={styles.addRoundButtonText}>Add Round</Text>
-        </TouchableOpacity>
       </ScrollView>
 
       <Modal
@@ -303,6 +300,7 @@ export default function GameScreen() {
           setScoreModalVisible(false);
           setEditingPlayerId(null);
           setScoreInput('');
+          setIsNegative(false);
         }}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -313,28 +311,41 @@ export default function GameScreen() {
                   {editingPlayerId &&
                     game.playerNames[game.playerIds.indexOf(editingPlayerId)]}
                 </Text>
-                <TextInput
-                  style={styles.scoreInput}
-                  placeholder="Enter score"
-                  value={scoreInput}
-                  onChangeText={(text) => {
-                    // Allow negative numbers and clear "0" when typing a new digit
-                    if (text === '-' || text === '') {
-                      setScoreInput(text);
-                    } else if (scoreInput === '0' && text.length > 1 && text[0] === '0' && text[1] !== '.') {
-                      // If current value is "0" and user types a digit, replace "0" with the new digit
-                      setScoreInput(text.substring(1));
-                    } else if (text.startsWith('0') && text.length > 1 && text[1] !== '.' && text[1] !== '-') {
-                      // Clear leading zero when typing a new digit (but allow "0.")
-                      setScoreInput(text.substring(1));
-                    } else if (/^-?\d*\.?\d*$/.test(text)) {
-                      // Allow numbers, decimals, and negative sign
-                      setScoreInput(text);
-                    }
-                  }}
-                  keyboardType="numeric"
-                  autoFocus={true}
-                />
+                <View style={styles.scoreInputContainer}>
+                  <TouchableOpacity
+                    style={[styles.negativeButton, isNegative && styles.negativeButtonActive]}
+                    onPress={() => setIsNegative(!isNegative)}
+                  >
+                    <Text style={[styles.negativeButtonText, isNegative && styles.negativeButtonTextActive]}>
+                      {isNegative ? '−' : '+'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TextInput
+                    style={styles.scoreInput}
+                    placeholder="Enter score"
+                    value={scoreInput}
+                    onChangeText={(text) => {
+                      // Clear "0" when typing a new digit
+                      if (text === '') {
+                        setScoreInput('');
+                      } else if (scoreInput === '0' && text.length > 1 && text[0] === '0' && text[1] !== '.') {
+                        // If current value is "0" and user types a digit, replace "0" with the new digit
+                        setScoreInput(text.substring(1));
+                      } else if (text.startsWith('0') && text.length > 1 && text[1] !== '.') {
+                        // Clear leading zero when typing a new digit (but allow "0.")
+                        setScoreInput(text.substring(1));
+                      } else if (/^\d*\.?\d*$/.test(text)) {
+                        // Allow only numbers and decimal point
+                        setScoreInput(text);
+                      }
+                    }}
+                    keyboardType="decimal-pad"
+                    autoFocus={true}
+                  />
+                </View>
+                <Text style={styles.scorePreview}>
+                  Score: {isNegative ? '-' : ''}{scoreInput || '0'}
+                </Text>
                 <View style={styles.modalActions}>
                   <TouchableOpacity
                     style={[styles.modalButton, styles.cancelButton, styles.modalButtonSpacing]}
@@ -343,6 +354,7 @@ export default function GameScreen() {
                       setScoreModalVisible(false);
                       setEditingPlayerId(null);
                       setScoreInput('');
+                      setIsNegative(false);
                     }}
                   >
                     <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -373,28 +385,40 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#fff',
-    padding: 20,
-    paddingTop: 60,
+    padding: 12,
+    paddingTop: 50,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   gameTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  roundText: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 12,
+  headerButtons: {
+    flexDirection: 'row',
+  },
+  nextRoundButton: {
+    backgroundColor: '#34C759',
+    padding: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  nextRoundButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   finishButton: {
     backgroundColor: '#FF3B30',
-    padding: 10,
-    borderRadius: 8,
+    padding: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
     alignItems: 'center',
-    alignSelf: 'flex-start',
   },
   finishButtonText: {
     color: '#fff',
@@ -445,51 +469,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+    width: 80,
+    textAlign: 'right',
+    marginRight: 12,
   },
-  scoresSection: {
-    marginBottom: 20,
-  },
-  scoresSectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#333',
-  },
-  scoreCard: {
-    backgroundColor: '#fff',
-    padding: 16,
+  roundScoreButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    minWidth: 70,
+    alignItems: 'center',
   },
-  scoreCardName: {
+  roundScoreButtonText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  scoreCardValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 4,
-  },
-  tapToEdit: {
-    fontSize: 12,
-    color: '#999',
-  },
-  addRoundButton: {
-    backgroundColor: '#34C759',
-    padding: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  addRoundButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   loadingText: {
     fontSize: 16,
@@ -516,14 +511,49 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: '#333',
   },
+  scoreInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  negativeButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  negativeButtonActive: {
+    borderColor: '#007AFF',
+    backgroundColor: '#E3F2FD',
+  },
+  negativeButtonText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  negativeButtonTextActive: {
+    color: '#007AFF',
+  },
   scoreInput: {
+    flex: 1,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     fontSize: 24,
-    marginBottom: 20,
     textAlign: 'center',
+  },
+  scorePreview: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    fontWeight: '500',
   },
   modalActions: {
     flexDirection: 'row',

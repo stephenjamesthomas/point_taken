@@ -55,7 +55,7 @@ export default function GameHistoryScreen() {
     );
   };
 
-  const getWinner = (game: Game): string => {
+  const getLeader = (game: Game): string => {
     if (game.scores.length === 0) return 'No rounds played';
     
     const totals: { [playerId: string]: number } = {};
@@ -73,11 +73,11 @@ export default function GameHistoryScreen() {
     const sorted = Object.entries(totals).sort((a, b) => 
       winCondition === 'high' ? b[1] - a[1] : a[1] - b[1]
     );
-    const winnerId = sorted[0][0];
-    const winnerName = game.playerNames[game.playerIds.indexOf(winnerId)];
-    const winnerScore = sorted[0][1];
+    const leaderId = sorted[0][0];
+    const leaderName = game.playerNames[game.playerIds.indexOf(leaderId)];
+    const leaderScore = sorted[0][1];
     
-    return `${winnerName} (${winnerScore})`;
+    return `${leaderName} (${leaderScore})`;
   };
 
   const formatDate = (dateString: string): string => {
@@ -114,7 +114,9 @@ export default function GameHistoryScreen() {
               <Text style={styles.gameRounds}>
                 Rounds: {item.scores.length}
               </Text>
-              <Text style={styles.gameWinner}>Winner: {getWinner(item)}</Text>
+              <Text style={styles.gameWinner}>
+                {item.completedAt ? 'Winner: ' : 'Leads: '}{getLeader(item)}
+              </Text>
               {item.completedAt && (
                 <Text style={styles.gameCompleted}>
                   Completed: {formatDate(item.completedAt)}
@@ -132,7 +134,9 @@ export default function GameHistoryScreen() {
                   }
                 }}
               >
-                <Text style={styles.viewButtonText}>View</Text>
+                <Text style={styles.viewButtonText}>
+                  {item.completedAt ? 'View' : 'Resume'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}

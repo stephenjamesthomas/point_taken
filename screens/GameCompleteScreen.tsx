@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
+  ScrollView,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,7 +25,8 @@ export default function GameCompleteScreen() {
   const { gameId } = route.params;
 
   const [game, setGame] = useState<Game | null>(null);
-  const [winner, setWinner] = useState<{ name: string; score: number } | null>(null);
+  const [winner, setWinner] = useState<{ id: string; name: string; total: number } | null>(null);
+  const [allPlayers, setAllPlayers] = useState<{ id: string; name: string; total: number }[]>([]);
   const [scaleAnim] = useState(new Animated.Value(0));
   const [fadeAnim] = useState(new Animated.Value(0));
 
@@ -66,6 +68,7 @@ export default function GameCompleteScreen() {
   const calculateWinner = (gameData: Game) => {
     if (!gameData || gameData.scores.length === 0) {
       setWinner(null);
+      setAllPlayers([]);
       return;
     }
 
@@ -92,6 +95,7 @@ export default function GameCompleteScreen() {
       );
 
     setWinner(sorted[0]);
+    setAllPlayers(sorted);
   };
 
   const handlePlayAgain = async () => {
@@ -139,7 +143,11 @@ export default function GameCompleteScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={true}
+      >
         <Animated.View
           style={[
             styles.celebrationContainer,
@@ -153,7 +161,57 @@ export default function GameCompleteScreen() {
           <Text style={styles.celebrationText}>Game Complete!</Text>
           <Text style={styles.winnerLabel}>Winner</Text>
           <Text style={styles.winnerName}>{winner.name}</Text>
-          <Text style={styles.winnerScore}>{winner.score} points</Text>
+          <Text style={styles.winnerScore}>{winner.total} points</Text>
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.resultsContainer,
+            {
+              opacity: fadeAnim,
+            },
+          ]}
+        >
+          <Text style={styles.resultsTitle}>Final Standings</Text>
+          {allPlayers.map((player, index) => {
+            const isWinner = player.id === winner.id;
+            return (
+              <View
+                key={player.id}
+                style={[
+                  styles.playerResultItem,
+                  isWinner && styles.playerResultItemWinner,
+                ]}
+              >
+                <View style={styles.playerResultRank}>
+                  <Text
+                    style={[
+                      styles.playerResultRankText,
+                      isWinner && styles.playerResultRankTextWinner,
+                    ]}
+                  >
+                    #{index + 1}
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.playerResultName,
+                    isWinner && styles.playerResultNameWinner,
+                  ]}
+                >
+                  {player.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.playerResultScore,
+                    isWinner && styles.playerResultScoreWinner,
+                  ]}
+                >
+                  {player.total}
+                </Text>
+              </View>
+            );
+          })}
         </Animated.View>
 
         <Animated.View
@@ -178,7 +236,7 @@ export default function GameCompleteScreen() {
             <Text style={styles.menuButtonText}>Return to Main Menu</Text>
           </TouchableOpacity>
         </Animated.View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -188,11 +246,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  content: {
+  scrollView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  },
+  contentContainer: {
     padding: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
+    alignItems: 'center',
   },
   loadingText: {
     fontSize: 16,
@@ -202,7 +263,8 @@ const styles = StyleSheet.create({
   },
   celebrationContainer: {
     alignItems: 'center',
-    marginBottom: 60,
+    marginBottom: 40,
+    width: '100%',
   },
   celebrationEmoji: {
     fontSize: 80,
@@ -233,6 +295,74 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#666',
     textAlign: 'center',
+    fontWeight: '600',
+  },
+  resultsContainer: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  resultsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  playerResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  playerResultItemWinner: {
+    backgroundColor: '#E8F4FD',
+    borderRadius: 8,
+    borderBottomWidth: 0,
+    marginBottom: 4,
+  },
+  playerResultRank: {
+    width: 40,
+    alignItems: 'center',
+  },
+  playerResultRankText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  playerResultRankTextWinner: {
+    color: '#007AFF',
+  },
+  playerResultName: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    marginLeft: 12,
+  },
+  playerResultNameWinner: {
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
+  playerResultScore: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    minWidth: 60,
+    textAlign: 'right',
+  },
+  playerResultScoreWinner: {
+    color: '#007AFF',
+    fontSize: 20,
   },
   actionsContainer: {
     width: '100%',
