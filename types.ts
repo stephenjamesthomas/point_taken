@@ -1,7 +1,23 @@
 export interface Player {
   id: string;
-  name: string;
+  firstName: string;
+  lastName?: string; // Optional last name
+  avatar?: string; // URI to image file or 'default' for default avatar
   createdAt: string;
+  // Statistics
+  gamesPlayed: number;
+  gamesWon: number;
+  totalScore: number; // Sum of all scores across all games
+  averagePlace: number; // Average finishing position
+  gameHistory: PlayerGameHistory[]; // History of games played
+}
+
+export interface PlayerGameHistory {
+  gameId: string;
+  templateName: string;
+  place: number; // 1st, 2nd, 3rd, etc.
+  finalScore: number;
+  completedAt: string;
 }
 
 export type WinCondition = 'high' | 'low';

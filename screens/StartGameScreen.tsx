@@ -10,12 +10,13 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Player, GameTemplate, Game } from '../types';
-import { loadPlayers, loadTemplates, loadGames, saveGames } from '../utils/storage';
+import { loadPlayers, loadTemplates, loadGames, saveGames, getPlayerFullName } from '../utils/storage';
 
 type StartGameScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -104,8 +105,32 @@ export default function StartGameScreen() {
       return players;
     }
     const searchLower = playerSearch.toLowerCase();
-    return players.filter((p) => p.name.toLowerCase().includes(searchLower));
+    return players.filter((p) => {
+      const fullName = getPlayerFullName(p);
+      return fullName.toLowerCase().includes(searchLower);
+    });
   }, [players, playerSearch]);
+
+  // Avatar helper functions
+  const AVATAR_COLORS = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+    '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52BE80',
+  ];
+
+  const getInitials = (player: Player): string => {
+    const firstInitial = player.firstName.trim().charAt(0).toUpperCase() || '';
+    const lastInitial = player.lastName?.trim().charAt(0).toUpperCase() || '';
+    return firstInitial + lastInitial || firstInitial || '?';
+  };
+
+  const getAvatarColor = (player: Player): string => {
+    const name = (player.firstName + (player.lastName || '')).toLowerCase();
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  };
 
   const handleTemplateSelect = (template: GameTemplate) => {
     Keyboard.dismiss();
@@ -164,7 +189,7 @@ export default function StartGameScreen() {
     }
 
     const selectedPlayers = players.filter((p) => selectedPlayerIds.has(p.id));
-    const playerNames = selectedPlayers.map((p) => p.name);
+    const playerNames = selectedPlayers.map((p) => getPlayerFullName(p));
 
     const newGame: Game = {
       id: Date.now().toString(),
@@ -314,6 +339,9 @@ export default function StartGameScreen() {
                 >
                   {recentPlayers.map((item) => {
                     const isSelected = selectedPlayerIds.has(item.id);
+                    const fullName = getPlayerFullName(item);
+                    const initials = getInitials(item);
+                    const avatarColor = getAvatarColor(item);
                     return (
                       <TouchableOpacity
                         key={item.id}
@@ -323,13 +351,20 @@ export default function StartGameScreen() {
                         ]}
                         onPress={() => handlePlayerToggle(item.id)}
                       >
+                        {item.avatar ? (
+                          <Image source={{ uri: item.avatar }} style={styles.playerAvatarSmall} />
+                        ) : (
+                          <View style={[styles.playerAvatarPlaceholderSmall, { backgroundColor: avatarColor }]}>
+                            <Text style={styles.playerAvatarInitialsSmall}>{initials}</Text>
+                          </View>
+                        )}
                         <Text
                           style={[
                             styles.playerCardName,
                             isSelected ? styles.playerCardNameSelected : null,
                           ]}
                         >
-                          {item.name}
+                          {fullName}
                         </Text>
                         {isSelected && <Text style={styles.checkmark}>✓</Text>}
                       </TouchableOpacity>
@@ -356,6 +391,9 @@ export default function StartGameScreen() {
             ) : (
               filteredPlayers.map((item) => {
                 const isSelected = selectedPlayerIds.has(item.id);
+                const fullName = getPlayerFullName(item);
+                const initials = getInitials(item);
+                const avatarColor = getAvatarColor(item);
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -365,13 +403,20 @@ export default function StartGameScreen() {
                     ]}
                     onPress={() => handlePlayerToggle(item.id)}
                   >
+                    {item.avatar ? (
+                      <Image source={{ uri: item.avatar }} style={styles.playerAvatar} />
+                    ) : (
+                      <View style={[styles.playerAvatarPlaceholder, { backgroundColor: avatarColor }]}>
+                        <Text style={styles.playerAvatarInitials}>{initials}</Text>
+                      </View>
+                    )}
                     <Text
                       style={[
                         styles.playerCardName,
                         isSelected ? styles.playerCardNameSelected : null,
                       ]}
                     >
-                      {item.name}
+                      {fullName}
                     </Text>
                     {isSelected && <Text style={styles.checkmark}>✓</Text>}
                   </TouchableOpacity>
@@ -506,22 +551,62 @@ const styles = StyleSheet.create({
   playerCardHorizontal: {
     backgroundColor: '#fff',
     padding: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: 8,
     marginRight: 12,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#e0e0e0',
+    minWidth: 140,
   },
   playerCardSelected: {
     borderColor: '#007AFF',
     backgroundColor: '#E3F2FD',
   },
+  playerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  playerAvatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  playerAvatarInitials: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  playerAvatarSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  playerAvatarPlaceholderSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  playerAvatarInitialsSmall: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
   playerCardName: {
     fontSize: 16,
     fontWeight: '500',
     color: '#333',
+    flex: 1,
   },
   playerCardNameSelected: {
     color: '#007AFF',

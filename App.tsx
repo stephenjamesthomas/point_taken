@@ -6,6 +6,8 @@ import { StatusBar } from 'expo-status-bar';
 import { RootStackParamList } from './navigation/types';
 import HomeScreen from './screens/HomeScreen';
 import PlayersScreen from './screens/PlayersScreen';
+import EditPlayerScreen from './screens/EditPlayerScreen';
+import PlayerDetailScreen from './screens/PlayerDetailScreen';
 import TemplatesScreen from './screens/TemplatesScreen';
 import EditTemplateScreen from './screens/EditTemplateScreen';
 import StartGameScreen from './screens/StartGameScreen';
@@ -28,6 +30,8 @@ export default function App() {
         >
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Players" component={PlayersScreen} />
+          <Stack.Screen name="EditPlayer" component={EditPlayerScreen} />
+          <Stack.Screen name="PlayerDetail" component={PlayerDetailScreen} />
           <Stack.Screen name="Templates" component={TemplatesScreen} />
           <Stack.Screen name="EditTemplate" component={EditTemplateScreen} />
           <Stack.Screen name="StartGame" component={StartGameScreen} />

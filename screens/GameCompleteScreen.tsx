@@ -6,12 +6,13 @@ import {
   TouchableOpacity,
   Animated,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { Game } from '../types';
-import { loadGames, saveGames, loadTemplates } from '../utils/storage';
+import { Game, Player } from '../types';
+import { loadGames, saveGames, loadTemplates, updatePlayerStatistics, loadPlayers } from '../utils/storage';
 
 type GameCompleteScreenRouteProp = RouteProp<RootStackParamList, 'GameComplete'>;
 type GameCompleteScreenNavigationProp = NativeStackNavigationProp<
@@ -25,8 +26,9 @@ export default function GameCompleteScreen() {
   const { gameId } = route.params;
 
   const [game, setGame] = useState<Game | null>(null);
-  const [winner, setWinner] = useState<{ id: string; name: string; total: number } | null>(null);
-  const [allPlayers, setAllPlayers] = useState<{ id: string; name: string; total: number }[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [winner, setWinner] = useState<{ id: string; name: string; total: number; player?: Player } | null>(null);
+  const [allPlayers, setAllPlayers] = useState<{ id: string; name: string; total: number; player?: Player }[]>([]);
   const [scaleAnim] = useState(new Animated.Value(0));
   const [fadeAnim] = useState(new Animated.Value(0));
 
@@ -49,7 +51,11 @@ export default function GameCompleteScreen() {
   }, [gameId]);
 
   const loadGameData = async () => {
-    const games = await loadGames();
+    const [games, loadedPlayers] = await Promise.all([
+      loadGames(),
+      loadPlayers(),
+    ]);
+    setPlayers(loadedPlayers);
     const foundGame = games.find((g) => g.id === gameId);
     if (foundGame) {
       // Add default values for backward compatibility
@@ -61,11 +67,43 @@ export default function GameCompleteScreen() {
         endConditionTiming: foundGame.endConditionTiming,
       };
       setGame(gameWithDefaults);
-      calculateWinner(gameWithDefaults);
+      calculateWinner(gameWithDefaults, loadedPlayers);
+      
+      // Update player statistics when game is complete
+      if (gameWithDefaults.completedAt) {
+        await updatePlayerStatistics(gameWithDefaults);
+      }
     }
   };
 
-  const calculateWinner = (gameData: Game) => {
+  // Avatar helper functions
+  const AVATAR_COLORS = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+    '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52BE80',
+  ];
+
+  const getPlayerById = (playerId: string, playersList: Player[]): Player | undefined => {
+    return playersList.find((p) => p.id === playerId);
+  };
+
+  const getInitials = (player: Player | undefined): string => {
+    if (!player) return '?';
+    const firstInitial = player.firstName.trim().charAt(0).toUpperCase() || '';
+    const lastInitial = player.lastName?.trim().charAt(0).toUpperCase() || '';
+    return firstInitial + lastInitial || firstInitial || '?';
+  };
+
+  const getAvatarColor = (player: Player | undefined): string => {
+    if (!player) return AVATAR_COLORS[0];
+    const name = (player.firstName + (player.lastName || '')).toLowerCase();
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  };
+
+  const calculateWinner = (gameData: Game, playersList: Player[]) => {
     if (!gameData || gameData.scores.length === 0) {
       setWinner(null);
       setAllPlayers([]);
@@ -85,11 +123,15 @@ export default function GameCompleteScreen() {
 
     const winCondition = gameData.winCondition || 'high';
     const sorted = gameData.playerIds
-      .map((id) => ({
-        id,
-        name: gameData.playerNames[gameData.playerIds.indexOf(id)],
-        total: totals[id],
-      }))
+      .map((id) => {
+        const player = getPlayerById(id, playersList);
+        return {
+          id,
+          name: gameData.playerNames[gameData.playerIds.indexOf(id)],
+          total: totals[id],
+          player, // Include full player object for avatar
+        };
+      })
       .sort((a, b) =>
         winCondition === 'high' ? b.total - a.total : a.total - b.total
       );
@@ -160,6 +202,13 @@ export default function GameCompleteScreen() {
           <Text style={styles.celebrationEmoji}>🎉</Text>
           <Text style={styles.celebrationText}>Game Complete!</Text>
           <Text style={styles.winnerLabel}>Winner</Text>
+          {winner.player?.avatar ? (
+            <Image source={{ uri: winner.player.avatar }} style={styles.winnerAvatar} />
+          ) : (
+            <View style={[styles.winnerAvatarPlaceholder, { backgroundColor: getAvatarColor(winner.player) }]}>
+              <Text style={styles.winnerAvatarInitials}>{getInitials(winner.player)}</Text>
+            </View>
+          )}
           <Text style={styles.winnerName}>{winner.name}</Text>
           <Text style={styles.winnerScore}>{winner.total} points</Text>
         </Animated.View>
@@ -175,6 +224,9 @@ export default function GameCompleteScreen() {
           <Text style={styles.resultsTitle}>Final Standings</Text>
           {allPlayers.map((player, index) => {
             const isWinner = player.id === winner.id;
+            const playerObj = player.player;
+            const initials = getInitials(playerObj);
+            const avatarColor = getAvatarColor(playerObj);
             return (
               <View
                 key={player.id}
@@ -193,6 +245,13 @@ export default function GameCompleteScreen() {
                     #{index + 1}
                   </Text>
                 </View>
+                {playerObj?.avatar ? (
+                  <Image source={{ uri: playerObj.avatar }} style={styles.playerResultAvatar} />
+                ) : (
+                  <View style={[styles.playerResultAvatarPlaceholder, { backgroundColor: avatarColor }]}>
+                    <Text style={styles.playerResultAvatarInitials}>{initials}</Text>
+                  </View>
+                )}
                 <Text
                   style={[
                     styles.playerResultName,
@@ -284,6 +343,29 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  winnerAvatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: '#007AFF',
+    marginBottom: 16,
+  },
+  winnerAvatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: '#007AFF',
+    marginBottom: 16,
+  },
+  winnerAvatarInitials: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
   winnerName: {
     fontSize: 36,
     fontWeight: 'bold',
@@ -342,6 +424,25 @@ const styles = StyleSheet.create({
   },
   playerResultRankTextWinner: {
     color: '#007AFF',
+  },
+  playerResultAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  playerResultAvatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  playerResultAvatarInitials: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   playerResultName: {
     flex: 1,

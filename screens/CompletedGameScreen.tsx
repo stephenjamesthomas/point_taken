@@ -5,12 +5,13 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { Game } from '../types';
-import { loadGames } from '../utils/storage';
+import { Game, Player } from '../types';
+import { loadGames, loadPlayers, getPlayerFullName } from '../utils/storage';
 
 type CompletedGameScreenRouteProp = RouteProp<RootStackParamList, 'CompletedGame'>;
 type CompletedGameScreenNavigationProp = NativeStackNavigationProp<
@@ -24,13 +25,18 @@ export default function CompletedGameScreen() {
   const { gameId } = route.params;
 
   const [game, setGame] = useState<Game | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
     loadGameData();
   }, [gameId]);
 
   const loadGameData = async () => {
-    const games = await loadGames();
+    const [games, loadedPlayers] = await Promise.all([
+      loadGames(),
+      loadPlayers(),
+    ]);
+    setPlayers(loadedPlayers);
     const foundGame = games.find((g) => g.id === gameId);
     if (foundGame) {
       // Add default values for backward compatibility
@@ -62,6 +68,33 @@ export default function CompletedGameScreen() {
     });
   };
 
+  // Avatar helper functions
+  const AVATAR_COLORS = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+    '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52BE80',
+  ];
+
+  const getPlayerById = (playerId: string): Player | undefined => {
+    return players.find((p) => p.id === playerId);
+  };
+
+  const getInitials = (player: Player | undefined): string => {
+    if (!player) return '?';
+    const firstInitial = player.firstName.trim().charAt(0).toUpperCase() || '';
+    const lastInitial = player.lastName?.trim().charAt(0).toUpperCase() || '';
+    return firstInitial + lastInitial || firstInitial || '?';
+  };
+
+  const getAvatarColor = (player: Player | undefined): string => {
+    if (!player) return AVATAR_COLORS[0];
+    const name = (player.firstName + (player.lastName || '')).toLowerCase();
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  };
+
   if (!game) {
     return (
       <View style={styles.container}>
@@ -72,11 +105,15 @@ export default function CompletedGameScreen() {
 
   const winCondition = game.winCondition || 'high';
   const sortedPlayers = game.playerIds
-    .map((id) => ({
-      id,
-      name: game.playerNames[game.playerIds.indexOf(id)],
-      total: getTotalScore(id),
-    }))
+    .map((id) => {
+      const player = getPlayerById(id);
+      return {
+        id,
+        name: game.playerNames[game.playerIds.indexOf(id)],
+        player, // Include full player object for avatar
+        total: getTotalScore(id),
+      };
+    })
     .sort((a, b) => winCondition === 'high' ? b.total - a.total : a.total - b.total);
 
   return (
@@ -109,15 +146,27 @@ export default function CompletedGameScreen() {
       >
         <View style={styles.leaderboard}>
           <Text style={styles.leaderboardTitle}>Final Standings</Text>
-          {sortedPlayers.map((player, index) => (
-            <View key={player.id} style={styles.leaderboardItem}>
-              <View style={styles.rankContainer}>
-                <Text style={styles.rank}>#{index + 1}</Text>
+          {sortedPlayers.map((player, index) => {
+            const playerObj = player.player;
+            const initials = getInitials(playerObj);
+            const avatarColor = getAvatarColor(playerObj);
+            return (
+              <View key={player.id} style={styles.leaderboardItem}>
+                <View style={styles.rankContainer}>
+                  <Text style={styles.rank}>#{index + 1}</Text>
+                </View>
+                {playerObj?.avatar ? (
+                  <Image source={{ uri: playerObj.avatar }} style={styles.playerAvatar} />
+                ) : (
+                  <View style={[styles.playerAvatarPlaceholder, { backgroundColor: avatarColor }]}>
+                    <Text style={styles.playerAvatarInitials}>{initials}</Text>
+                  </View>
+                )}
+                <Text style={styles.leaderboardName}>{player.name}</Text>
+                <Text style={styles.leaderboardScore}>{player.total}</Text>
               </View>
-              <Text style={styles.leaderboardName}>{player.name}</Text>
-              <Text style={styles.leaderboardScore}>{player.total}</Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {game.scores.length > 0 && (
@@ -224,6 +273,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#007AFF',
+  },
+  playerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  playerAvatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  playerAvatarInitials: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   leaderboardName: {
     flex: 1,

@@ -11,12 +11,13 @@ import {
   ScrollView,
   Keyboard,
   TouchableWithoutFeedback,
+  Image,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { Game, ScoreEntry } from '../types';
-import { loadGames, saveGames } from '../utils/storage';
+import { Game, ScoreEntry, Player } from '../types';
+import { loadGames, saveGames, loadPlayers, getPlayerFullName } from '../utils/storage';
 
 type GameScreenRouteProp = RouteProp<RootStackParamList, 'Game'>;
 type GameScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Game'>;
@@ -27,6 +28,7 @@ export default function GameScreen() {
   const { gameId } = route.params;
 
   const [game, setGame] = useState<Game | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [currentRound, setCurrentRound] = useState<number>(0);
   const [roundScores, setRoundScores] = useState<{ [playerId: string]: string }>({});
   const [scoreModalVisible, setScoreModalVisible] = useState(false);
@@ -39,7 +41,11 @@ export default function GameScreen() {
   }, [gameId]);
 
   const loadGameData = async () => {
-    const games = await loadGames();
+    const [games, loadedPlayers] = await Promise.all([
+      loadGames(),
+      loadPlayers(),
+    ]);
+    setPlayers(loadedPlayers);
     const foundGame = games.find((g) => g.id === gameId);
     if (foundGame) {
       // Add default values for backward compatibility
@@ -191,6 +197,22 @@ export default function GameScreen() {
     setRoundScores(nextRoundScores);
   };
 
+  const handleExitGame = () => {
+    Alert.alert(
+      'Exit Game',
+      'Are you sure you want to exit? Your progress will be saved and you can resume later.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Exit',
+          onPress: () => {
+            navigation.navigate('Home');
+          },
+        },
+      ]
+    );
+  };
+
   const handleFinishGame = async () => {
     if (!game) return;
 
@@ -226,6 +248,33 @@ export default function GameScreen() {
     return parseFloat(roundScores[playerId]) || 0;
   };
 
+  // Avatar helper functions
+  const AVATAR_COLORS = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+    '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52BE80',
+  ];
+
+  const getPlayerById = (playerId: string): Player | undefined => {
+    return players.find((p) => p.id === playerId);
+  };
+
+  const getInitials = (player: Player | undefined): string => {
+    if (!player) return '?';
+    const firstInitial = player.firstName.trim().charAt(0).toUpperCase() || '';
+    const lastInitial = player.lastName?.trim().charAt(0).toUpperCase() || '';
+    return firstInitial + lastInitial || firstInitial || '?';
+  };
+
+  const getAvatarColor = (player: Player | undefined): string => {
+    if (!player) return AVATAR_COLORS[0];
+    const name = (player.firstName + (player.lastName || '')).toLowerCase();
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  };
+
   if (!game) {
     return (
       <View style={styles.container}>
@@ -236,16 +285,23 @@ export default function GameScreen() {
 
   const winCondition = game.winCondition || 'high';
   const sortedPlayers = game.playerIds
-    .map((id) => ({
-      id,
-      name: game.playerNames[game.playerIds.indexOf(id)],
-      total: getTotalScore(id),
-    }))
+    .map((id) => {
+      const player = getPlayerById(id);
+      return {
+        id,
+        name: game.playerNames[game.playerIds.indexOf(id)],
+        player, // Include full player object for avatar
+        total: getTotalScore(id),
+      };
+    })
     .sort((a, b) => winCondition === 'high' ? b.total - a.total : a.total - b.total);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity style={styles.exitButton} onPress={handleExitGame}>
+          <Text style={styles.exitButtonText}>← Exit</Text>
+        </TouchableOpacity>
         <Text style={styles.gameTitle}>{game.templateName}</Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity style={styles.nextRoundButton} onPress={handleAddRound}>
@@ -269,11 +325,21 @@ export default function GameScreen() {
           <Text style={styles.leaderboardTitle}>Round {currentRound + 1}</Text>
           {sortedPlayers.map((player, index) => {
             const roundScore = getCurrentRoundScore(player.id);
+            const playerObj = player.player;
+            const initials = getInitials(playerObj);
+            const avatarColor = getAvatarColor(playerObj);
             return (
               <View key={player.id} style={styles.leaderboardItem}>
                 <View style={styles.rankContainer}>
                   <Text style={styles.rank}>#{index + 1}</Text>
                 </View>
+                {playerObj?.avatar ? (
+                  <Image source={{ uri: playerObj.avatar }} style={styles.playerAvatar} />
+                ) : (
+                  <View style={[styles.playerAvatarPlaceholder, { backgroundColor: avatarColor }]}>
+                    <Text style={styles.playerAvatarInitials}>{initials}</Text>
+                  </View>
+                )}
                 <Text style={styles.leaderboardName}>{player.name}</Text>
                 <Text style={styles.leaderboardScore}>{player.total}</Text>
                 <TouchableOpacity
@@ -390,12 +456,26 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  exitButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 12,
+  },
+  exitButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
   },
   gameTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 8,
+    flex: 1,
+    textAlign: 'center',
   },
   headerButtons: {
     flexDirection: 'row',
@@ -458,6 +538,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#007AFF',
+  },
+  playerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  playerAvatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  playerAvatarInitials: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   leaderboardName: {
     flex: 1,

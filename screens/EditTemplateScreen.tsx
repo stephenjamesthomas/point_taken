@@ -8,6 +8,8 @@ import {
   TextInput,
   Alert,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -149,7 +151,11 @@ export default function EditTemplateScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -227,7 +233,10 @@ export default function EditTemplateScreen() {
             </View>
             <TouchableOpacity
               style={styles.checkboxContainer}
-              onPress={() => setUnlimitedPlayers(!unlimitedPlayers)}
+              onPress={() => {
+                Keyboard.dismiss();
+                setUnlimitedPlayers(!unlimitedPlayers);
+              }}
             >
               <View style={[styles.checkbox, unlimitedPlayers && styles.checkboxChecked]}>
                 {unlimitedPlayers && <Text style={styles.checkmarkSmall}>✓</Text>}
@@ -247,7 +256,10 @@ export default function EditTemplateScreen() {
                   styles.radioOption,
                   winCondition === 'high' && styles.radioOptionSelected,
                 ]}
-                onPress={() => setWinCondition('high')}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setWinCondition('high');
+                }}
               >
                 <Text
                   style={[
@@ -266,7 +278,10 @@ export default function EditTemplateScreen() {
                   styles.radioOption,
                   winCondition === 'low' && styles.radioOptionSelected,
                 ]}
-                onPress={() => setWinCondition('low')}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setWinCondition('low');
+                }}
               >
                 <Text
                   style={[
@@ -289,13 +304,16 @@ export default function EditTemplateScreen() {
               Select when the game should end
             </Text>
             <View style={styles.radioGroup}>
-              <TouchableOpacity
-                style={[
-                  styles.radioOption,
-                  endCondition === 'manual' && styles.radioOptionSelected,
-                ]}
-                onPress={() => setEndCondition('manual')}
-              >
+                <TouchableOpacity
+                  style={[
+                    styles.radioOption,
+                    endCondition === 'manual' && styles.radioOptionSelected,
+                  ]}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setEndCondition('manual');
+                  }}
+                >
                 <Text
                   style={[
                     styles.radioText,
@@ -308,13 +326,16 @@ export default function EditTemplateScreen() {
                   <Text style={styles.checkmark}>✓</Text>
                 )}
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.radioOption,
-                  endCondition === 'rounds' && styles.radioOptionSelected,
-                ]}
-                onPress={() => setEndCondition('rounds')}
-              >
+                <TouchableOpacity
+                  style={[
+                    styles.radioOption,
+                    endCondition === 'rounds' && styles.radioOptionSelected,
+                  ]}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setEndCondition('rounds');
+                  }}
+                >
                 <Text
                   style={[
                     styles.radioText,
@@ -327,13 +348,16 @@ export default function EditTemplateScreen() {
                   <Text style={styles.checkmark}>✓</Text>
                 )}
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.radioOption,
-                  endCondition === 'target' && styles.radioOptionSelected,
-                ]}
-                onPress={() => setEndCondition('target')}
-              >
+                <TouchableOpacity
+                  style={[
+                    styles.radioOption,
+                    endCondition === 'target' && styles.radioOptionSelected,
+                  ]}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setEndCondition('target');
+                  }}
+                >
                 <Text
                   style={[
                     styles.radioText,
@@ -379,10 +403,13 @@ export default function EditTemplateScreen() {
                   onChangeText={setEndConditionValue}
                   keyboardType="numeric"
                 />
-                <TouchableOpacity
-                  style={styles.checkboxContainer}
-                  onPress={() => setEndConditionAbsoluteValue(!endConditionAbsoluteValue)}
-                >
+                  <TouchableOpacity
+                    style={styles.checkboxContainer}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setEndConditionAbsoluteValue(!endConditionAbsoluteValue);
+                    }}
+                  >
                   <View style={[styles.checkbox, endConditionAbsoluteValue && styles.checkboxChecked]}>
                     {endConditionAbsoluteValue && <Text style={styles.checkmarkSmall}>✓</Text>}
                   </View>
@@ -403,7 +430,10 @@ export default function EditTemplateScreen() {
                       endConditionTiming === 'immediately' &&
                         styles.radioOptionSelected,
                     ]}
-                    onPress={() => setEndConditionTiming('immediately')}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setEndConditionTiming('immediately');
+                    }}
                   >
                     <Text
                       style={[
@@ -424,7 +454,10 @@ export default function EditTemplateScreen() {
                       endConditionTiming === 'finishRound' &&
                         styles.radioOptionSelected,
                     ]}
-                    onPress={() => setEndConditionTiming('finishRound')}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setEndConditionTiming('finishRound');
+                    }}
                   >
                     <Text
                       style={[
@@ -445,7 +478,10 @@ export default function EditTemplateScreen() {
                       endConditionTiming === 'additionalTurn' &&
                         styles.radioOptionSelected,
                     ]}
-                    onPress={() => setEndConditionTiming('additionalTurn')}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setEndConditionTiming('additionalTurn');
+                    }}
                   >
                     <Text
                       style={[
@@ -465,7 +501,7 @@ export default function EditTemplateScreen() {
             </>
           )}
         </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
