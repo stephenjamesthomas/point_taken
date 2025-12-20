@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../constants/design';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -59,44 +60,51 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: Colors.background,
   },
   contentContainer: {
     flexGrow: 1,
   },
   content: {
-    padding: 20,
+    padding: Spacing.xl,
     paddingTop: 60,
-    paddingBottom: 40,
+    paddingBottom: Spacing.huge,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: Typography.h1,
+    fontWeight: Typography.bold,
     textAlign: 'center',
-    marginBottom: 8,
-    color: '#333',
+    marginBottom: Spacing.sm,
+    color: Colors.textPrimary,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: Typography.body,
     textAlign: 'center',
-    marginBottom: 40,
-    color: '#666',
+    marginBottom: Spacing.huge,
+    color: Colors.textSecondary,
+    fontWeight: Typography.regular,
   },
   menuContainer: {
+    gap: Spacing.lg,
   },
   menuButton: {
-    backgroundColor: '#007AFF',
-    padding: 20,
-    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.lg,
     alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.md,
   },
   menuButtonSpacing: {
-    marginBottom: 16,
+    // Using gap in container instead
   },
   menuButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    color: Colors.surface,
+    fontSize: Typography.h5,
+    fontWeight: Typography.semibold,
+    letterSpacing: 0.3,
   },
 });
 
