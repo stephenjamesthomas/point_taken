@@ -288,9 +288,11 @@ export default function GameScreen() {
   const sortedPlayers = game.playerIds
     .map((id) => {
       const player = getPlayerById(id);
+      // Use player's actual name from the player object if available, otherwise fall back to stored name
+      const name = player ? getPlayerFullName(player) : (game.playerNames[game.playerIds.indexOf(id)] || 'Unknown Player');
       return {
         id,
-        name: game.playerNames[game.playerIds.indexOf(id)],
+        name,
         player, // Include full player object for avatar
         total: getTotalScore(id),
       };
@@ -329,11 +331,9 @@ export default function GameScreen() {
             const playerObj = player.player;
             const initials = getInitials(playerObj);
             const avatarColor = getAvatarColor(playerObj);
+            const hasScore = roundScore !== 0 || (roundScores[player.id] && roundScores[player.id] !== '0');
             return (
               <View key={player.id} style={styles.leaderboardItem}>
-                <View style={styles.rankContainer}>
-                  <Text style={styles.rank}>#{index + 1}</Text>
-                </View>
                 {playerObj?.avatar ? (
                   <Image source={{ uri: playerObj.avatar }} style={styles.playerAvatar} />
                 ) : (
@@ -342,15 +342,15 @@ export default function GameScreen() {
                   </View>
                 )}
                 <Text style={styles.leaderboardName}>{player.name}</Text>
-                <Text style={styles.leaderboardScore}>{player.total}</Text>
                 <TouchableOpacity
-                  style={styles.roundScoreButton}
+                  style={[styles.roundScoreButton, hasScore && styles.roundScoreButtonFilled]}
                   onPress={() => handleScoreInput(player.id)}
                 >
                   <Text style={styles.roundScoreButtonText}>
                     {roundScore === 0 && !roundScores[player.id] ? 'Enter' : roundScore}
                   </Text>
                 </TouchableOpacity>
+                <Text style={styles.leaderboardScore}>{player.total}</Text>
               </View>
             );
           })}
@@ -375,8 +375,12 @@ export default function GameScreen() {
             <TouchableWithoutFeedback onPress={() => {}}>
               <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>
-                  {editingPlayerId &&
-                    game.playerNames[game.playerIds.indexOf(editingPlayerId)]}
+                  {editingPlayerId && (() => {
+                    const player = getPlayerById(editingPlayerId);
+                    return player 
+                      ? getPlayerFullName(player)
+                      : (game.playerNames[game.playerIds.indexOf(editingPlayerId)] || 'Unknown Player');
+                  })()}
                 </Text>
                 <View style={styles.scoreInputContainer}>
                   <TouchableOpacity
@@ -538,14 +542,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
   },
-  rankContainer: {
-    width: 40,
-  },
-  rank: {
-    fontSize: Typography.body,
-    fontWeight: Typography.bold,
-    color: Colors.primary,
-  },
   playerAvatar: {
     width: 44,
     height: 44,
@@ -579,7 +575,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     width: 80,
     textAlign: 'right',
-    marginRight: Spacing.md,
+    marginLeft: Spacing.md,
   },
   roundScoreButton: {
     backgroundColor: Colors.primary,
@@ -590,6 +586,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadows.sm,
+  },
+  roundScoreButtonFilled: {
+    backgroundColor: Colors.primaryLight,
+    borderWidth: 2,
+    borderColor: Colors.primary,
   },
   roundScoreButtonText: {
     color: Colors.surface,

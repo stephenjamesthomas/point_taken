@@ -12,7 +12,7 @@ import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Game, Player } from '../types';
-import { loadGames, saveGames, loadTemplates, updatePlayerStatistics, loadPlayers } from '../utils/storage';
+import { loadGames, saveGames, loadTemplates, updatePlayerStatistics, loadPlayers, getPlayerFullName } from '../utils/storage';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../constants/design';
 
 type GameCompleteScreenRouteProp = RouteProp<RootStackParamList, 'GameComplete'>;
@@ -126,9 +126,11 @@ export default function GameCompleteScreen() {
     const sorted = gameData.playerIds
       .map((id) => {
         const player = getPlayerById(id, playersList);
+        // Use player's actual name from the player object if available, otherwise fall back to stored name
+        const name = player ? getPlayerFullName(player) : (gameData.playerNames[gameData.playerIds.indexOf(id)] || 'Unknown Player');
         return {
           id,
-          name: gameData.playerNames[gameData.playerIds.indexOf(id)],
+          name,
           total: totals[id],
           player, // Include full player object for avatar
         };

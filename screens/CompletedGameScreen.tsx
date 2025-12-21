@@ -108,9 +108,11 @@ export default function CompletedGameScreen() {
   const sortedPlayers = game.playerIds
     .map((id) => {
       const player = getPlayerById(id);
+      // Use player's actual name from the player object if available, otherwise fall back to stored name
+      const name = player ? getPlayerFullName(player) : (game.playerNames[game.playerIds.indexOf(id)] || 'Unknown Player');
       return {
         id,
-        name: game.playerNames[game.playerIds.indexOf(id)],
+        name,
         player, // Include full player object for avatar
         total: getTotalScore(id),
       };
@@ -177,7 +179,8 @@ export default function CompletedGameScreen() {
               <View key={roundIndex} style={styles.roundCard}>
                 <Text style={styles.roundNumber}>Round {roundIndex + 1}</Text>
                 {round.map((entry) => {
-                  const playerName = game.playerNames[game.playerIds.indexOf(entry.playerId)];
+                  const player = getPlayerById(entry.playerId);
+                  const playerName = player ? getPlayerFullName(player) : (game.playerNames[game.playerIds.indexOf(entry.playerId)] || 'Unknown Player');
                   return (
                     <View key={entry.playerId} style={styles.roundScoreItem}>
                       <Text style={styles.roundScoreName}>{playerName}</Text>
