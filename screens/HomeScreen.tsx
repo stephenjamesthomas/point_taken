@@ -20,36 +20,55 @@ export default function HomeScreen() {
       bounces={true}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Card Score Tracker</Text>
-        <Text style={styles.subtitle}>Track your card game scores</Text>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>Card Score</Text>
+          <Text style={styles.titleAccent}>Tracker</Text>
+        </View>
+        <Text style={styles.subtitle}>Track your card game scores with style</Text>
 
         <View style={styles.menuContainer}>
           <TouchableOpacity
-            style={[styles.menuButton, styles.menuButtonSpacing]}
+            style={[styles.menuButton, styles.menuButtonPrimary]}
             onPress={() => navigation.navigate('StartGame')}
+            activeOpacity={0.8}
           >
-            <Text style={styles.menuButtonText}>Start New Game</Text>
+            <View style={styles.menuButtonContent}>
+              <Text style={styles.menuButtonIcon}>🎮</Text>
+              <Text style={styles.menuButtonText}>Start New Game</Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.menuButton, styles.menuButtonSpacing]}
+            style={[styles.menuButton, styles.menuButtonSecondary]}
             onPress={() => navigation.navigate('Players')}
+            activeOpacity={0.8}
           >
-            <Text style={styles.menuButtonText}>Manage Players</Text>
+            <View style={styles.menuButtonContent}>
+              <Text style={styles.menuButtonIcon}>👥</Text>
+              <Text style={styles.menuButtonText}>Manage Players</Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.menuButton, styles.menuButtonSpacing]}
+            style={[styles.menuButton, styles.menuButtonAccent]}
             onPress={() => navigation.navigate('Templates')}
+            activeOpacity={0.8}
           >
-            <Text style={styles.menuButtonText}>Game Templates</Text>
+            <View style={styles.menuButtonContent}>
+              <Text style={styles.menuButtonIcon}>📋</Text>
+              <Text style={styles.menuButtonText}>Game Templates</Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.menuButton}
+            style={[styles.menuButton, styles.menuButtonInfo]}
             onPress={() => navigation.navigate('GameHistory')}
+            activeOpacity={0.8}
           >
-            <Text style={styles.menuButtonText}>Game History</Text>
+            <View style={styles.menuButtonContent}>
+              <Text style={styles.menuButtonIcon}>📊</Text>
+              <Text style={styles.menuButtonText}>Game History</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -70,41 +89,74 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: Spacing.huge,
   },
+  titleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'baseline',
+    marginBottom: Spacing.sm,
+    flexWrap: 'wrap',
+  },
   title: {
     fontSize: Typography.h1,
-    fontWeight: Typography.bold,
-    textAlign: 'center',
-    marginBottom: Spacing.sm,
+    fontWeight: Typography.extrabold,
     color: Colors.textPrimary,
-    letterSpacing: -0.5,
+    letterSpacing: Typography.letterSpacingTight,
+    marginRight: Spacing.sm,
+  },
+  titleAccent: {
+    fontSize: Typography.h1,
+    fontWeight: Typography.extrabold,
+    color: Colors.primaryLight,
+    letterSpacing: Typography.letterSpacingTight,
   },
   subtitle: {
     fontSize: Typography.body,
     textAlign: 'center',
-    marginBottom: Spacing.huge,
+    marginBottom: Spacing.xxxl,
     color: Colors.textSecondary,
     fontWeight: Typography.regular,
+    letterSpacing: Typography.letterSpacingNormal,
   },
   menuContainer: {
     gap: Spacing.lg,
   },
   menuButton: {
-    backgroundColor: Colors.primary,
     paddingVertical: Spacing.xl,
     paddingHorizontal: Spacing.xl,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 2,
+    ...Shadows.lg,
+  },
+  menuButtonPrimary: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primaryLight,
+  },
+  menuButtonSecondary: {
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondaryLight,
+  },
+  menuButtonAccent: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accentLight,
+  },
+  menuButtonInfo: {
+    backgroundColor: Colors.info,
+    borderColor: Colors.infoLight,
+  },
+  menuButtonContent: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadows.md,
+    gap: Spacing.md,
   },
-  menuButtonSpacing: {
-    // Using gap in container instead
+  menuButtonIcon: {
+    fontSize: 24,
   },
   menuButtonText: {
     color: Colors.surface,
     fontSize: Typography.h5,
-    fontWeight: Typography.semibold,
-    letterSpacing: 0.3,
+    fontWeight: Typography.bold,
+    letterSpacing: Typography.letterSpacingWide,
   },
 });
 

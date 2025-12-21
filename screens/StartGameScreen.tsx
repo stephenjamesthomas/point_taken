@@ -480,10 +480,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   searchInput: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
+    backgroundColor: Colors.surfaceSecondary,
+    borderWidth: 2,
     borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     fontSize: Typography.body,
     marginBottom: Spacing.md,
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
   templateCard: {
     backgroundColor: Colors.surface,
     padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     minWidth: 150,
     flex: 1,
     maxWidth: '48%',
@@ -512,12 +512,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     marginBottom: Spacing.md,
     marginHorizontal: Spacing.sm,
-    ...Shadows.sm,
+    ...Shadows.md,
   },
   templateCardSelected: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primaryLight,
-    ...Shadows.md,
+    ...Shadows.colored,
   },
   templateCardName: {
     fontSize: Typography.body,
@@ -554,14 +554,14 @@ const styles = StyleSheet.create({
   playerCard: {
     backgroundColor: Colors.surface,
     padding: Spacing.lg,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: Colors.border,
-    ...Shadows.sm,
+    ...Shadows.md,
   },
   playerCardHorizontal: {
     backgroundColor: Colors.surface,
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
   playerCardSelected: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primaryLight,
-    ...Shadows.md,
+    ...Shadows.colored,
   },
   playerAvatar: {
     width: 44,
@@ -647,10 +647,12 @@ const styles = StyleSheet.create({
   startButton: {
     backgroundColor: Colors.success,
     padding: Spacing.xl,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     alignItems: 'center',
     marginTop: Spacing.xl,
     marginBottom: Spacing.huge,
+    borderWidth: 2,
+    borderColor: Colors.successLight,
     ...Shadows.lg,
   },
   startButtonText: {
